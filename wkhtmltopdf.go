@@ -1,15 +1,15 @@
+// This package is a cover around wkhtmltopdf library (https://wkhtmltopdf.org/).
 // If you put string and input file to input, input string/[]bytes{} will be oin priority
 package wkhtmltopdfgo
 
 import (
 	"bytes"
-	"reflect"
 	"fmt"
-	"os/exec"
-	"strings"
-	"log"
-	"os"
 	"net/http"
+	"os"
+	"os/exec"
+	"reflect"
+	"strings"
 )
 
 type Wkhtml struct {
@@ -30,7 +30,7 @@ func New() Wkhtml {
 	}
 }
 
-//Set path to file with input html.
+//Set path to file with input html data.
 func (w *Wkhtml) InputFile(path string) error {
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
@@ -42,22 +42,23 @@ func (w *Wkhtml) InputFile(path string) error {
 	return nil
 }
 
-//@TODO
+//Put string to stdin of wkhtmltipdf
 func (w *Wkhtml) InputString(html string) {
-	w.Stdin = []byte(html)
+	w.InputBytes([]byte(html))
 }
 
 //Set input url
-func (w *Wkhtml) InputUrl(url string) {
+func (w *Wkhtml) InputUrl(url string) error {
 	//Check that URL exists
 	resp, err := http.Head(url)
 	if err != nil || resp.StatusCode != http.StatusOK {
-
+		return fmt.Errorf(`URL "%s" returns status %d %s.'`, url, resp.StatusCode, resp.Status)
 	}
 	w.Input = url
+	return nil
 }
 
-//@TODO
+//Put bytes to stdin of wkhtmltopdf
 func (w *Wkhtml) InputBytes(i []byte) {
 	w.Stdin = i
 }
@@ -106,9 +107,6 @@ func (w *Wkhtml) Create() error {
 	args := w.Args()
 
 	cmd := exec.Command(w.ExecBin, args...)
-
-	log.Printf("ExecBin: %s.\n", w.ExecBin)
-	log.Printf("Execute wkhtmltopdf command: %s\n\n", strings.Join(cmd.Args, " ")) //@TODO remove
 
 	cmd.Stderr = &w.Stderr
 	cmd.Stdin = bytes.NewReader(w.Stdin)
